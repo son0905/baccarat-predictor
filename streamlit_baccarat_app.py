@@ -12,7 +12,9 @@ def card_value(card):
 def hand_score(cards):
     return sum([card_value(c) for c in cards]) % 10
 
-games = []
+# 세션 상태에 games 리스트 초기화
+if 'games' not in st.session_state:
+    st.session_state.games = []
 
 st.title("바카라 게임 예측기")
 st.write("카드를 입력해 게임 결과를 기록하고 다음 판 결과를 예측합니다.")
@@ -32,7 +34,7 @@ if st.button("게임 기록 추가"):
         else:
             result = 'Tie'
 
-        games.append({
+        st.session_state.games.append({
             'Player': player_cards,
             'Banker': banker_cards,
             'P_Score': p_score,
@@ -43,12 +45,12 @@ if st.button("게임 기록 추가"):
     else:
         st.error("카드는 반드시 2장씩 입력해주세요.")
 
-if games:
+if st.session_state.games:
     st.subheader("게임 기록")
-    for i, g in enumerate(games):
+    for i, g in enumerate(st.session_state.games):
         st.write(f"Game {i+1}: {g['Player']} ({g['P_Score']}) vs {g['Banker']} ({g['B_Score']}) → {g['Result']}")
 
-    results = [g['Result'] for g in games]
+    results = [g['Result'] for g in st.session_state.games]
     count = Counter(results)
     total = len(results)
 
