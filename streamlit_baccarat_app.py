@@ -16,7 +16,6 @@ def draw_third_card(player_hand, banker_hand):
     p_score = hand_score(player_hand)
     b_score = hand_score(banker_hand)
 
-    # 내추럴
     if p_score >= 8 or b_score >= 8:
         return player_hand, banker_hand
 
@@ -26,7 +25,6 @@ def draw_third_card(player_hand, banker_hand):
         if third_player:
             player_hand.append(third_player)
 
-    # 뱅커의 행동은 복잡함
     b_score = hand_score(banker_hand)
     p_third_val = card_value(third_player) if third_player else None
 
@@ -36,7 +34,6 @@ def draw_third_card(player_hand, banker_hand):
             if third_banker:
                 banker_hand.append(third_banker)
     else:
-        # 복잡한 룰 적용
         if b_score <= 2:
             banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_force").upper())
         elif b_score == 3 and p_third_val != 8:
@@ -52,16 +49,23 @@ def draw_third_card(player_hand, banker_hand):
 
 if 'games' not in st.session_state:
     st.session_state.games = []
+if 'p_input' not in st.session_state:
+    st.session_state.p_input = ""
+if 'b_input' not in st.session_state:
+    st.session_state.b_input = ""
 
-st.title("진짜 룰 기반 바카라 예측기")
-st.write("플레이어/뱅커 카드 입력 후 실제 룰에 따라 3번째 카드 입력창이 자동 등장합니다.")
+st.title("V5: 진짜 룰 + 자동 입력 초기화")
+st.write("3번째 카드 룰 완전 적용 + 카드 입력 후 자동 초기화까지!")
 
-player_input = st.text_input("플레이어 카드 2장 (예: 9,K)", key="p_input")
-banker_input = st.text_input("뱅커 카드 2장 (예: 3,4)", key="b_input")
+player_input = st.text_input("플레이어 카드 2장 (예: 9,K)", value=st.session_state.p_input, key="player_input_box")
+banker_input = st.text_input("뱅커 카드 2장 (예: 3,4)", value=st.session_state.b_input, key="banker_input_box")
 
 if st.button("게임 기록 추가"):
     player_cards = player_input.upper().split(',')
     banker_cards = banker_input.upper().split(',')
+
+    st.session_state.p_input = ""
+    st.session_state.b_input = ""
 
     if len(player_cards) == 2 and len(banker_cards) == 2:
         player_cards, banker_cards = draw_third_card(player_cards, banker_cards)
