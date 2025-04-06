@@ -1,5 +1,13 @@
 import streamlit as st
+import random
 from collections import Counter
+
+# 초기 슈 카드 구성 (6덱 기준, 312장)
+def create_shoe():
+    deck = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+    shoe = deck * 24  # 24 = 6덱 * 4무늬 = 312장 / 13종류
+    random.shuffle(shoe)
+    return shoe
 
 def card_value(card):
     if card in ['10', 'J', 'Q', 'K']:
@@ -12,84 +20,65 @@ def card_value(card):
 def hand_score(hand):
     return sum([card_value(c) for c in hand]) % 10
 
-def draw_third_card(player_hand, banker_hand):
-    p_score = hand_score(player_hand)
-    b_score = hand_score(banker_hand)
-
-    if p_score >= 8 or b_score >= 8:
-        return player_hand, banker_hand
-
-    third_player = None
-    if p_score <= 5:
-        third_player = st.text_input("플레이어 3번째 카드 입력 (없으면 엔터)", key="player_3rd").upper()
-        if third_player:
-            player_hand.append(third_player)
-
-    b_score = hand_score(banker_hand)
-    p_third_val = card_value(third_player) if third_player else None
-
-    if third_player is None:
-        if b_score <= 5:
-            third_banker = st.text_input("뱅커 3번째 카드 입력 (없으면 엔터)", key="banker_3rd").upper()
-            if third_banker:
-                banker_hand.append(third_banker)
-    else:
-        if b_score <= 2:
-            banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_force").upper())
-        elif b_score == 3 and p_third_val != 8:
-            banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_3").upper())
-        elif b_score == 4 and p_third_val in range(2, 8):
-            banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_4").upper())
-        elif b_score == 5 and p_third_val in range(4, 8):
-            banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_5").upper())
-        elif b_score == 6 and p_third_val in range(6, 8):
-            banker_hand.append(st.text_input("뱅커 3번째 카드 입력", key="banker_3rd_6").upper())
-
-    return player_hand, banker_hand
+if 'shoe' not in st.session_state:
+    st.session_state.shoe = create_shoe()
 
 if 'games' not in st.session_state:
     st.session_state.games = []
-if 'p_input' not in st.session_state:
-    st.session_state.p_input = ""
-if 'b_input' not in st.session_state:
-    st.session_state.b_input = ""
 
-st.title("V5: 진짜 룰 + 자동 입력 초기화")
-st.write("3번째 카드 룰 완전 적용 + 카드 입력 후 자동 초기화까지!")
+st.title("V7: 슈 기반 카드 추적 시스템")
+st.write("실제 슈(6덱) 구성으로 카드 소모를 추적하며 게임 진행!")
 
-player_input = st.text_input("플레이어 카드 2장 (예: 9,K)", value=st.session_state.p_input, key="player_input_box")
-banker_input = st.text_input("뱅커 카드 2장 (예: 3,4)", value=st.session_state.b_input, key="banker_input_box")
+# 카드 뽑기 함수
+def draw_cards(num):
+    drawn = []
+    for _ in range(num):
+        if st.session_state.shoe:
+            drawn.append(st.session_state.shoe.pop(0))
+    return drawn
 
-if st.button("게임 기록 추가"):
-    player_cards = player_input.upper().split(',')
-    banker_cards = banker_input.upper().split(',')
+# 한 게임 실행
+if st.button("게임 진행 (카드 자동 소모)"):
+    if len(st.session_state.shoe) < 6:
+        st.warning("슈에 카드가 부족합니다. 새 슈를 생성합니다.")
+        st.session_state.shoe = create_shoe()
 
-    st.session_state.p_input = ""
-    st.session_state.b_input = ""
+    player = draw_cards(2)
+    banker = draw_cards(2)
 
-    if len(player_cards) == 2 and len(banker_cards) == 2:
-        player_cards, banker_cards = draw_third_card(player_cards, banker_cards)
-        p_score = hand_score(player_cards)
-        b_score = hand_score(banker_cards)
+    p_score = hand_score(player)
+    b_score = hand_score(banker)
 
-        if p_score > b_score:
-            result = 'Player'
-        elif b_score > p_score:
-            result = 'Banker'
-        else:
-            result = 'Tie'
+    # 내추럴
+    if p_score < 8 and b_score < 8:
+        if p_score <= 5:
+            player += draw_cards(1)
 
-        st.session_state.games.append({
-            'Player': player_cards,
-            'Banker': banker_cards,
-            'P_Score': p_score,
-            'B_Score': b_score,
-            'Result': result
-        })
-        st.success(f"결과 기록됨: {result}")
+        # 복잡한 뱅커 규칙 생략: 간단 룰로 처리
+        if b_score <= 5:
+            banker += draw_cards(1)
+
+    p_score = hand_score(player)
+    b_score = hand_score(banker)
+
+    if p_score > b_score:
+        result = 'Player'
+    elif b_score > p_score:
+        result = 'Banker'
     else:
-        st.error("카드는 반드시 2장씩 입력해주세요.")
+        result = 'Tie'
 
+    st.session_state.games.append({
+        'Player': player,
+        'Banker': banker,
+        'P_Score': p_score,
+        'B_Score': b_score,
+        'Result': result
+    })
+
+    st.success(f"게임 결과: {result}")
+
+# 기록 출력
 if st.session_state.games:
     st.subheader("게임 기록")
     for i, g in enumerate(st.session_state.games):
@@ -107,3 +96,5 @@ if st.session_state.games:
 
     st.subheader("다음 게임 예측")
     st.write(f"예측: **{suggestion[0]}** (확률: {suggestion[1]*100:.1f}%)")
+
+    st.info(f"남은 카드 수: {len(st.session_state.shoe)}장")
